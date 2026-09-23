@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { Box, Container, InputBase, IconButton } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import CloseIcon from '@mui/icons-material/Close'
@@ -10,6 +11,23 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ totalTerms, totalMeanings, query, onQueryChange }: HeroSectionProps) {
+  const [inputState, setInputState] = useState({ query, value: query })
+  const inputValue = inputState.query === query ? inputState.value : query
+  const isComposing = useRef(false)
+
+  const handleInputChange = (value: string, eventIsComposing: boolean): void => {
+    setInputState({ query, value })
+    if (!isComposing.current && !eventIsComposing) {
+      onQueryChange(value)
+    }
+  }
+
+  const handleCompositionEnd = (value: string): void => {
+    isComposing.current = false
+    setInputState({ query, value })
+    onQueryChange(value)
+  }
+
   return (
     <Box
       component="section"
@@ -88,10 +106,14 @@ export function HeroSection({ totalTerms, totalMeanings, query, onQueryChange }:
           </Box>
           <InputBase
             fullWidth
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
+            value={inputValue}
+            onChange={(e) => handleInputChange(e.target.value, (e.nativeEvent as InputEvent).isComposing)}
             placeholder="영문 용어, 한국어 번역, 동의어 검색"
-            inputProps={{ 'aria-label': '용어 검색' }}
+            inputProps={{
+              'aria-label': '용어 검색',
+              onCompositionStart: () => { isComposing.current = true },
+              onCompositionEnd: (e) => handleCompositionEnd(e.currentTarget.value),
+            }}
             sx={{
               flex: 1,
               fontFamily: 'var(--ff-sans)',
@@ -100,9 +122,13 @@ export function HeroSection({ totalTerms, totalMeanings, query, onQueryChange }:
               '& input': { py: 2, pr: 1 },
             }}
           />
-          {query ? (
+          {inputValue ? (
             <IconButton
-              onClick={() => onQueryChange('')}
+              onClick={() => {
+                isComposing.current = false
+                setInputState({ query, value: '' })
+                onQueryChange('')
+              }}
               aria-label="검색어 지우기"
               sx={{
                 mx: 1,
